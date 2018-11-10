@@ -121,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
         mProgressBar.setVisibility(View.GONE);
         cities.clear();
 
-        if (result.list.size() > 0) {
+        if (result != null && result.list.size() > 0) {
             cities.addAll(result.list);
             mList.setVisibility(View.VISIBLE);
             mAdapter.notifyDataSetChanged();

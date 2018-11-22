@@ -1,12 +1,10 @@
 package com.rperazzo.weatherapp.ui;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -28,16 +26,14 @@ import com.rperazzo.weatherapp.model.weather.WeatherRepository;
 import com.rperazzo.weatherapp.model.weather.WeatherRepositoryImpl;
 import com.rperazzo.weatherapp.model.weather.remote.WeatherRemote;
 import com.rperazzo.weatherapp.model.weather.remote.WeatherRemoteImpl;
+import com.rperazzo.weatherapp.presentation.WeatherContract;
+import com.rperazzo.weatherapp.presentation.WeatherPresenter;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements WeatherView {
+public class MainActivity extends AppCompatActivity implements WeatherContract.View {
 
-    private static final String PREFERENCE_NAME = "com.rperazzo.weatherapp.shared";
-    private static final String TEMPERATURE_UNIT_KEY = "TEMPERATURE_UNIT_KEY";
-
-    private SharedPreferences mSharedPref;
     private EditText mEditText;
     private TextView mTextView;
     private ProgressBar mProgressBar;
@@ -45,15 +41,12 @@ public class MainActivity extends AppCompatActivity implements WeatherView {
     private FindItemAdapter mAdapter;
     private ArrayList<City> cities = new ArrayList<>();
 
-    WeatherRepository mWeatherRepository;
-    SettingsRepository mSettingsRepository;
+    WeatherContract.Presenter mPresenter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        mSharedPref = getSharedPreferences(PREFERENCE_NAME, Context.MODE_PRIVATE);
 
         mEditText = (EditText) findViewById(R.id.editText);
         mTextView = (TextView) findViewById(R.id.textView);
@@ -72,12 +65,27 @@ public class MainActivity extends AppCompatActivity implements WeatherView {
                 return false;
             }
         });
+        initPresenter();
+    }
 
+    private void initPresenter() {
         WeatherRemote weatherRemote = new WeatherRemoteImpl();
-        mWeatherRepository = new WeatherRepositoryImpl(this, weatherRemote);
-
+        WeatherRepository weatherRepository = new WeatherRepositoryImpl(weatherRemote);
         SettingsLocal settingsLocal = new SettingsLocalImpl(this);
-        mSettingsRepository = new SettingsRepositoryImpl(settingsLocal);
+        SettingsRepository settingsRepository = new SettingsRepositoryImpl(settingsLocal);
+        mPresenter = new WeatherPresenter(weatherRepository, settingsRepository);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        mPresenter.onAttachView(this);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        mPresenter.onDettachView();
     }
 
     @Override
@@ -91,29 +99,27 @@ public class MainActivity extends AppCompatActivity implements WeatherView {
         int id = item.getItemId();
 
         if (id == R.id.menu_celcius) {
-            updateUnitIfNecessary("metric");
+            onUnitClick("metric");
             return true;
         } else if (id == R.id.menu_fahrenheit) {
-            updateUnitIfNecessary("imperial");
+            onUnitClick("imperial");
             return true;
         }
 
         return super.onOptionsItemSelected(item);
     }
 
-    private void updateUnitIfNecessary(String newUnits) {
-        String currentUnits = mSettingsRepository.getTemperatureUnit();
-        if (!currentUnits.equals(newUnits)) {
-            mSettingsRepository.setTemperatureUnit(newUnits);
-            searchByName();
-        }
+    private void onUnitClick(String unitClicked) {
+        String search = mEditText.getText().toString();
+        mPresenter.onUnitClick(unitClicked, search);
     }
 
     public void onSearchClick(View view) {
         searchByName();
     }
 
-    private void onStartLoading() {
+    @Override
+    public void onStartLoading() {
         mList.setVisibility(View.GONE);
         mProgressBar.setVisibility(View.VISIBLE);
         mTextView.setVisibility(View.GONE);
@@ -127,19 +133,13 @@ public class MainActivity extends AppCompatActivity implements WeatherView {
     }
 
     @Override
-    public void onFinishLoading(List<City> list) {
-
+    public void onFinishLoading(List<City> list, String units) {
         mProgressBar.setVisibility(View.GONE);
         cities.clear();
-
-        if (list != null && list.size() > 0) {
-            cities.addAll(list);
-            mList.setVisibility(View.VISIBLE);
-            mAdapter.setUnits(mSettingsRepository.getTemperatureUnit());
-            mAdapter.notifyDataSetChanged();
-        } else {
-            mTextView.setText("No results.");
-        }
+        cities.addAll(list);
+        mList.setVisibility(View.VISIBLE);
+        mAdapter.setUnits(units);
+        mAdapter.notifyDataSetChanged();
     }
 
     @Override
@@ -163,14 +163,7 @@ public class MainActivity extends AppCompatActivity implements WeatherView {
         }
 
         String search = mEditText.getText().toString();
-        if (TextUtils.isEmpty(search)) {
-            return;
-        }
-
-        onStartLoading();
-        String units = mSettingsRepository.getTemperatureUnit();
-
-        mWeatherRepository.search(search, units);
+        mPresenter.onSearchClick(search);
     }
 
 }

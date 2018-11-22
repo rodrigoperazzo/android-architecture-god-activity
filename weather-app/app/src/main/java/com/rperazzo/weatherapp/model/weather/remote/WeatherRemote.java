@@ -1,7 +1,7 @@
 package com.rperazzo.weatherapp.model.weather.remote;
 
-import com.rperazzo.weatherapp.ui.WeatherView;
+import com.rperazzo.weatherapp.presentation.WeatherContract;
 
 public interface WeatherRemote {
-    void find(String text, String units, final WeatherView view);
+    void find(String text, String units, final WeatherContract.Presenter presenter);
 }

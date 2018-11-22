@@ -1,5 +1,7 @@
 package com.rperazzo.weatherapp.model.weather;
 
+import com.rperazzo.weatherapp.presentation.WeatherContract;
+
 public interface WeatherRepository {
-    void search(String text, String units);
+    void search(WeatherContract.Presenter presenter, String text, String units);
 }

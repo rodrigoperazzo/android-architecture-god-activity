@@ -1,6 +1,6 @@
 package com.rperazzo.weatherapp.model.weather.remote;
 
-import com.rperazzo.weatherapp.ui.WeatherView;
+import com.rperazzo.weatherapp.presentation.WeatherContract;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -14,7 +14,7 @@ public class WeatherRemoteImpl implements WeatherRemote {
         mWeatherService = WeatherManager.getService();
     }
 
-    public void find(String text, String units, final WeatherView view) {
+    public void find(String text, String units, final WeatherContract.Presenter presenter) {
 
         final Call<FindResult> findCall = mWeatherService.find(text, units, WeatherManager.API_KEY);
         findCall.enqueue(new Callback<FindResult>() {
@@ -23,18 +23,18 @@ public class WeatherRemoteImpl implements WeatherRemote {
                 if (response != null) {
                     FindResult result = response.body();
                     if (result != null) {
-                        view.onFinishLoading(result.list);
+                        presenter.onFinishSearching(result.list);
                     } else {
-                        view.onFinishLoading(null);
+                        presenter.onFinishSearching(null);
                     }
                 } else {
-                    view.onFinishLoading(null);
+                    presenter.onFinishSearching(null);
                 }
             }
 
             @Override
             public void onFailure(Call<FindResult> call, Throwable t) {
-                view.onFinishLoadingWithError("error");
+                presenter.onFinishSearchingWithError("error");
             }
         });
     }
